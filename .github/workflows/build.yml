@@ -10,4 +10,4 @@ jobs:
       - name: Setup XanMod Headers
         run: sudo ./setup-jules.sh
       - name: Build Module
-        run: nix develop --command make CC=clang
+        run: nix develop --command bash -c "make CC=clang LLVM=1 KBASE=/lib/modules/6.18.18-x64v2-xanmod1"
