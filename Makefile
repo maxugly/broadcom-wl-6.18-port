@@ -73,16 +73,20 @@ ifneq ($(KERNELRELEASE),)
 
   # Object files
   obj-m += wl.o
-  # Milestone 16: Precisely link the binary blob to the final module link target only.
-  # This prevents duplication into intermediate object files.
+  # Milestone 17: Properly integrate the shipped binary into the composite object.
+  # We use the relative path for wl-y and let Kbuild handle the link.
   wl-y := src/shared/linux_osl.o \
           src/wl/sys/wl_linux.o \
           src/wl/sys/wl_iw.o \
-          src/wl/sys/wl_cfg80211_hybrid.o
+          src/wl/sys/wl_cfg80211_hybrid.o \
+          lib/wlc_hybrid.o
 
-  # Target-specific LDFLAGS for the composite wl.o object.
-  # This variable is used by Kbuild during the link of all components into wl.o.
-  LDFLAGS_wl.o := -r -T $(src)/lib/wlc_hybrid.o_shipped
+  # Standard rule to turn .o_shipped into .o and generate .cmd files.
+  # This avoids "No rule to make target" and modpost ".cmd not found" errors.
+  $(obj)/lib/wlc_hybrid.o: $(src)/lib/wlc_hybrid.o_shipped FORCE
+	$(call if_changed,shipped)
+
+  targets += lib/wlc_hybrid.o
 
 else
 
@@ -95,6 +99,7 @@ all:
 
 clean:
 	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) clean
+	rm -f lib/wlc_hybrid.o
 
 install:
 	install -D -m 755 wl.ko $(KBASE)/kernel/drivers/net/wireless/wl.ko

@@ -11,24 +11,18 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 
 ## [2026-03-22] Phase 4: The Symbol Duel & Linker Stability
 
-### Milestone 12: The Infiltration (REVEALED)
-- **Problem:** `ldflags-y` merged the binary blob into every intermediate object.
+### Milestone 16: The Linker's Precision (FAILED)
+- **Problem:** `ld.lld: error: ././lib/wlc_hybrid.o_shipped:35940: unclosed quote`.
+- **Reason:** Using `LDFLAGS_wl.o := -T ...` told the linker to treat the binary blob as a **linker script**. The linker then tried to parse the binary data as text, failing immediately when it hit a byte that looked like an unclosed quote.
 
-### Milestone 13: The Shipped Anchor
-- **Action:** Attempted manual `cp` rule for `lib/wlc_hybrid.o`.
-
-### Milestone 14: The Reference Guard (Void Linux Analysis)
-- **Actions:** Added `MODULE_DESCRIPTION()`; attempted Kbuild `shipped` rule.
-
-### Milestone 15: The Linker's Truce (FAILED)
-- **Problem:** `ldflags-y` proved to be too global in modern XanMod Kbuild, continuing to cause "duplicate symbol" errors by merging the blob into every `.o` file (verified by file size bloat).
-
-### Milestone 16: The Linker's Precision
-- **Discovery:** In modern Kbuild, `ldflags-y` is added to almost every command line. For composite modules, we must use target-specific flags.
+### Milestone 17: The Kbuild Shipped Protocol
+- **Discovery:** In recent Kbuild, the cleanest way to include a pre-compiled blob without duplication is to use the `$(obj)/%.o: $(src)/%.o_shipped` rule, but we must ensure it is added to `wl-y` correctly and that `targets` includes it to generate the necessary `.cmd` files.
 - **Action:** 
-  - Replaced `ldflags-y` with `LDFLAGS_wl.o`.
-  - This ensures the Broadcom binary blob (`wlc_hybrid.o_shipped`) is ONLY seen during the final link of `wl.o`, and not during the compilation of `wl_linux.c` or `wl_cfg80211_hybrid.c`.
-- **Goal:** Eliminate duplicate symbols while maintaining `modpost` compatibility.
+  - Restored `lib/wlc_hybrid.o` to the `wl-y` list.
+  - Added `$(obj)/lib/wlc_hybrid.o: $(src)/lib/wlc_hybrid.o_shipped FORCE` with the `$(call if_changed,shipped)` command.
+  - Added `targets += lib/wlc_hybrid.o`.
+  - Removed the problematic `LDFLAGS_wl.o` override.
+- **Refinement:** Added `MODULE_DESCRIPTION` to `wl_linux.c` earlier to avoid modpost warnings.
 
 ---
 
@@ -36,4 +30,4 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 - [x] **Source Compilation:** 100% complete.
 - [x] **Objtool Bypass:** 100% success.
 - [x] **Metadata Compliance:** 100% success.
-- [ ] **Final Module Link:** Isolating the binary blob link phase.
+- [ ] **Final Module Link:** Synchronizing the Kbuild shipped object protocol.
