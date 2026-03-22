@@ -100,7 +100,11 @@
 #define schedule_work(_work) schedule_task((_work))
 #endif
 #ifndef flush_scheduled_work
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define flush_scheduled_work() do { } while (0)
+#else
 #define flush_scheduled_work() flush_scheduled_tasks()
+#endif
 #endif
 #endif	
 

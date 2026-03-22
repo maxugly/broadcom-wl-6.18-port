@@ -1489,11 +1489,9 @@ wl_down(wl_info_t *wl)
 	WL_UNLOCK(wl);
 
 	if (WL_ALL_PASSIVE_ENAB(wl)) {
-		int i = 0;
-		for (i = 0; (atomic_read(&wl->callbacks) > callbacks) && i < 10000; i++) {
-			schedule();
-			flush_scheduled_work();
-		}
+		flush_work(&wl->txq_task.work);
+		flush_work(&wl->multicast_task.work);
+		flush_work(&wl->wl_dpc_task.work);
 	}
 	else
 	{

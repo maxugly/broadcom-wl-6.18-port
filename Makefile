@@ -3,6 +3,14 @@
 
 ifneq ($(KERNELRELEASE),)
 
+  # Disable objtool for Broadcom binary compatibility
+  OBJECT_FILES_NON_STANDARD := y
+  OBJECT_FILES_NON_STANDARD_wl.o := y
+  OBJECT_FILES_NON_STANDARD_src/shared/linux_osl.o := y
+  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_linux.o := y
+  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_iw.o := y
+  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_cfg80211_hybrid.o := y
+
   # API Selection Logic
   LINUXVER_GOODFOR_CFG80211:=$(strip $(shell \
     if [ "$(VERSION)" -ge "2" -a "$(PATCHLEVEL)" -ge "6" -a "$(SUBLEVEL)" -ge "32" -o "$(VERSION)" -ge "3" ]; then \
@@ -59,7 +67,7 @@ KBASE      ?= /lib/modules/$(shell uname -r)
 KBUILD_DIR ?= $(KBASE)/build
 
 all:
-	$(MAKE) -C $(KBUILD_DIR) M=$(PWD)
+	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) KBUILD_NO_OBJTOOL=1
 
 clean:
 	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) clean
