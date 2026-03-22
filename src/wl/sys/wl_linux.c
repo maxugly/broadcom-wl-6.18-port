@@ -56,7 +56,16 @@
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/uaccess.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
+#include <linux/timer.h>
+
+#ifndef from_timer
+#define from_timer(var, callback_timer, timer_fieldname) timer_container_of(var, callback_timer, timer_fieldname)
+#endif
+#ifndef del_timer
+#define del_timer timer_delete
+#endif
+
 
 #include <proto/802.1d.h>
 
@@ -93,13 +102,7 @@ struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
 
 #include <wlc_wowl.h>
 
-static void wl_timer(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		struct timer_list *tl
-#else
-		ulong data
-#endif
-		);
+static void wl_timer(struct timer_list *tl);
 static void _wl_timer(wl_timer_t *t);
 static struct net_device *wl_alloc_linux_if(wl_if_t *wlif);
 
@@ -2360,19 +2363,8 @@ wl_timer_task(wl_task_t *task)
 }
 
 static void
-wl_timer(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		struct timer_list *tl
-#else
-		ulong data
-#endif
-) {
-	wl_timer_t *t =
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		from_timer(t, tl, timer);
-#else
-		(wl_timer_t *)data;
-#endif
+wl_timer(struct timer_list *tl) {
+	wl_timer_t *t = from_timer(t, tl, timer);
 
 	if (!WL_ALL_PASSIVE_ENAB(t->wl))
 		_wl_timer(t);
@@ -2424,13 +2416,7 @@ wl_init_timer(wl_info_t *wl, void (*fn)(void *arg), void *arg, const char *tname
 
 	bzero(t, sizeof(wl_timer_t));
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-	timer_setup(&t->timer, wl_timer, 0);
-#else
-	init_timer(&t->timer);
-	t->timer.data = (ulong) t;
-	t->timer.function = wl_timer;
-#endif
+timer_setup(&t->timer, wl_timer, 0);
 	t->wl = wl;
 	t->fn = fn;
 	t->arg = arg;
