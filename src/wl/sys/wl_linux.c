@@ -56,7 +56,7 @@
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/uaccess.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 
 #include <proto/802.1d.h>
 
@@ -2359,20 +2359,11 @@ wl_timer_task(wl_task_t *task)
 	atomic_dec(&t->wl->callbacks);
 }
 
+
 static void
-wl_timer(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		struct timer_list *tl
-#else
-		ulong data
-#endif
-) {
-	wl_timer_t *t =
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		from_timer(t, tl, timer);
-#else
-		(wl_timer_t *)data;
-#endif
+wl_timer(struct timer_list *tl)
+{
+	wl_timer_t *t = from_timer(t, tl, timer);
 
 	if (!WL_ALL_PASSIVE_ENAB(t->wl))
 		_wl_timer(t);
@@ -2423,14 +2414,7 @@ wl_init_timer(wl_info_t *wl, void (*fn)(void *arg), void *arg, const char *tname
 	}
 
 	bzero(t, sizeof(wl_timer_t));
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
 	timer_setup(&t->timer, wl_timer, 0);
-#else
-	init_timer(&t->timer);
-	t->timer.data = (ulong) t;
-	t->timer.function = wl_timer;
-#endif
 	t->wl = wl;
 	t->fn = fn;
 	t->arg = arg;
@@ -3334,7 +3318,7 @@ static ssize_t
 wl_proc_read(struct file *filp, char __user *buffer, size_t length, loff_t *offp)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
-	wl_info_t * wl = PDE_DATA(file_inode(filp));
+	wl_info_t * wl = pde_data(file_inode(filp));
 #else
 	wl_info_t * wl = pde_data(file_inode(filp));
 #endif
@@ -3395,7 +3379,7 @@ static ssize_t
 wl_proc_write(struct file *filp, const char __user *buff, size_t length, loff_t *offp)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
-	wl_info_t * wl = PDE_DATA(file_inode(filp));
+	wl_info_t * wl = pde_data(file_inode(filp));
 #else
 	wl_info_t * wl = pde_data(file_inode(filp));
 #endif

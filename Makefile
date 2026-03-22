@@ -1,3 +1,4 @@
+CC ?= clang-19
 #
 # Makefile fragment for Linux 2.6
 # Broadcom 802.11abg Networking Device Driver
