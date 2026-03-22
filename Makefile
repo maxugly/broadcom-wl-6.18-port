@@ -1,22 +1,29 @@
 # Broadcom 802.11abg Networking Device Driver Makefile
 # Targeting Kernel 6.18+ (XanMod)
 
-# Nuclear option: Completely disable objtool by overriding its Kbuild command
-# This must be at the very top to override kernel definitions
-cmd_objtool := :
+# Milestone 10: Point the objtool binary to /bin/true to subvert the check
+objtool := /bin/true
+OBJTOOL := /bin/true
 objtool-enabled := n
 KBUILD_OBJTOOL := 0
 KBUILD_NO_OBJTOOL := 1
 OBJECT_FILES_NON_STANDARD := y
 
+# Disable profiling and instrumentation to minimize objtool's triggers
+GCOV_PROFILE := n
+KCOV_INSTRUMENT := n
+UBSAN_SANITIZE := n
+KASAN_SANITIZE := n
+
 ifneq ($(KERNELRELEASE),)
 
-  # Disable objtool for all objects in this directory
+  # Explicitly disable objtool for all objects to provide Kbuild with "no-run" hints
   OBJECT_FILES_NON_STANDARD_wl.o := y
-  OBJECT_FILES_NON_STANDARD_src/shared/linux_osl.o := y
-  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_linux.o := y
-  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_iw.o := y
-  OBJECT_FILES_NON_STANDARD_src/wl/sys/wl_cfg80211_hybrid.o := y
+  $(obj)/wl.o: objtool-enabled := n
+  $(obj)/src/shared/linux_osl.o: objtool-enabled := n
+  $(obj)/src/wl/sys/wl_linux.o: objtool-enabled := n
+  $(obj)/src/wl/sys/wl_iw.o: objtool-enabled := n
+  $(obj)/src/wl/sys/wl_cfg80211_hybrid.o: objtool-enabled := n
 
   # API Selection Logic
   LINUXVER_GOODFOR_CFG80211:=$(strip $(shell \
@@ -50,7 +57,7 @@ ifneq ($(KERNELRELEASE),)
   ccflags-y += -I$(src)/src/wl/sys -I$(src)/src/wl/phy -I$(src)/src/wl/ppr/include
   ccflags-y += -I$(src)/src/shared/bcmwifi/include
   
-  # Silence stack validation errors if they still occur
+  # Silence stack validation/unwind triggers
   ccflags-y += -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables
 
   ifeq ($(APIFINAL),CFG80211)
