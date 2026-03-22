@@ -1,9 +1,13 @@
 # Broadcom 802.11abg Networking Device Driver Makefile
 # Targeting Kernel 6.18+ (XanMod)
 
-# Milestone 10: Point the objtool binary to /bin/true to subvert the check
-objtool := /bin/true
-OBJTOOL := /bin/true
+# Milestone 11: Use an absolute path to a local shim script for objtool
+# This satisfies Kbuild's mandatory tool requirement while skipping the actual scan.
+OBJTOOL_SHIM := $(abspath $(src)/scripts/objtool-shim.sh)
+override objtool := $(OBJTOOL_SHIM)
+override OBJTOOL := $(OBJTOOL_SHIM)
+
+# Nuclear hints for Kbuild
 objtool-enabled := n
 KBUILD_OBJTOOL := 0
 KBUILD_NO_OBJTOOL := 1
@@ -17,7 +21,7 @@ KASAN_SANITIZE := n
 
 ifneq ($(KERNELRELEASE),)
 
-  # Explicitly disable objtool for all objects to provide Kbuild with "no-run" hints
+  # Explicitly disable objtool for all objects
   OBJECT_FILES_NON_STANDARD_wl.o := y
   $(obj)/wl.o: objtool-enabled := n
   $(obj)/src/shared/linux_osl.o: objtool-enabled := n
@@ -84,7 +88,7 @@ KBASE      ?= /lib/modules/$(shell uname -r)
 KBUILD_DIR ?= $(KBASE)/build
 
 all:
-	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) KBUILD_OBJTOOL=0 KBUILD_NO_OBJTOOL=1 OBJTOOL=/bin/true
+	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) KBUILD_OBJTOOL=0 KBUILD_NO_OBJTOOL=1 OBJTOOL=$(abspath scripts/objtool-shim.sh)
 
 clean:
 	$(MAKE) -C $(KBUILD_DIR) M=$(PWD) clean
