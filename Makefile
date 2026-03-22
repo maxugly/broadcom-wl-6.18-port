@@ -73,13 +73,16 @@ ifneq ($(KERNELRELEASE),)
 
   # Object files
   obj-m += wl.o
-  # Milestone 12: Add the shipped binary using standard Kbuild syntax
-  # This prevents the blob from being merged into every intermediate object.
+  # Milestone 12 & 13: Correctly link the binary blob as a component object
   wl-y := src/shared/linux_osl.o \
           src/wl/sys/wl_linux.o \
           src/wl/sys/wl_iw.o \
           src/wl/sys/wl_cfg80211_hybrid.o \
           lib/wlc_hybrid.o
+
+  # Explicit rule for the shipped object in a subdirectory
+  $(obj)/lib/wlc_hybrid.o: $(src)/lib/wlc_hybrid.o_shipped
+	cp $< $@
 
 else
 

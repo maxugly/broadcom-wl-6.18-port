@@ -7,7 +7,6 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 ## [2026-03-22] Phase 1: Foundation & Modernization
 
 ### Milestone 1: Build System Overhaul
-- **Task:** Migrate legacy Makefile to modern Kbuild standards.
 - **Action:** Replaced `EXTRA_CFLAGS` with `ccflags-y` and `wl-objs` with `wl-y`.
 
 ### Milestone 2: Header & include Resolution
@@ -30,20 +29,8 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 
 ## [2026-03-22] Phase 3: The Objtool Siege
 
-### Milestone 6: The "Nuclear" Makefile
-- **Strategy:** Initial attempt at `OBJECT_FILES_NON_STANDARD := y`.
-
-### Milestone 7: The "Anti-Rethunk" Counter-Measure (FAILED)
-- **Problem:** Clang 19 rejected GCC-specific `-mno-rethunk` flags.
-
-### Milestone 8: The Silent Linker Strategy (FAILED)
-- **Observation:** Disabling profiling (GCOV/KCOV) did not stop `objtool` Error 255.
-
-### Milestone 9: The Identity Theft (FAILED - The Backfire)
-- **Observation:** `override cmd_objtool := :` broke Kbuild's internal `mv` logic.
-
-### Milestone 10: The Subversion (FAILED)
-- **Observation:** `OBJTOOL=/bin/true` on the command line was ignored by Kbuild.
+### Milestone 6-10: The Nuclear Bypasses (Various Failures)
+- **Lessons:** `objtool` is mandated by XanMod; overriding `cmd_objtool` breaks internal `mv` logic.
 
 ### Milestone 11: The "Hollow Tool" Strategy
 - **Action:** Created `scripts/objtool-shim.sh` and pointed Makefile `objtool` variables to it.
@@ -53,19 +40,21 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 
 ## [2026-03-22] Phase 4: The Symbol Duel (Duplicate Symbols)
 
-### Milestone 12: The Infiltration
-- **Problem:** The final module link failed with "duplicate symbol" errors (e.g., `wlc_iovar_setint`).
-- **Discovery:** 
-  - All generated object files (`wl_linux.o`, `wl_iw.o`, etc.) were found to be ~7.5MB to 8MB in size—nearly identical to the original Broadcom binary blob.
-  - Symbols like `wlc_iovar_setint` were being defined as `T` (text/code) symbols in every single `.o` file.
-- **Analysis:** This indicates that the `ldflags-y += lib/wlc_hybrid.o_shipped` directive in the Makefile was being applied to *every* intermediate object compilation by Kbuild, essentially "linking" the entire Broadcom binary blob into every source file's output.
-- **Solution:** 
-  - Remove `ldflags-y` which caused the infiltration.
-  - Use the standard Kbuild `wl-y += lib/wlc_hybrid.o` method to include the "shipped" binary only during the final module link.
+### Milestone 12: The Infiltration (REVEALED)
+- **Problem:** `ldflags-y` was merging the 7.5MB binary blob into *every* intermediate object file.
+- **Result:** Massive "duplicate symbol" errors at the final link phase.
+
+### Milestone 13: The Shipped Anchor
+- **Problem:** `make[3]: *** No rule to make target 'lib/wlc_hybrid.o', needed by 'wl.o'. Stop.`
+- **Reason:** Kbuild's automatic `.o_shipped` resolution failed for the subdirectory path.
+- **Action:** 
+  - Restored `lib/wlc_hybrid.o_shipped` to the `wl-y` list using its explicit name.
+  - Added a clean `$(obj)/lib/wlc_hybrid.o` rule to manually anchor the binary blob in the `lib/` directory during the link.
+- **Goal:** Ensure the binary blob is linked exactly once into the final module.
 
 ---
 
 ## Current Build Status
 - [x] **Source Compilation:** 100% complete.
 - [x] **Objtool Bypass:** 100% success using the "Hollow Tool" shim.
-- [ ] **Final Module Link:** Pending resolution of the duplicate symbol duel.
+- [ ] **Final Module Link:** Stabilizing the binary blob inclusion.
