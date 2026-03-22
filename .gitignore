@@ -1,18 +1,26 @@
-**/*.o.cmd
-**/*.ko.cmd
+# Compiled binary modules
+*.ko
+*.o
+*.mod.c
+*.mod
+*.a
+*.la
+*.lo
 
-built-in.o
-
-wl.ko
-wl.mod.c
-wl.mod.o
-wl.o
-
-src/shared/linux_osl.o
-src/wl/sys/wl_cfg80211_hybrid.o
-src/wl/sys/wl_iw.o
-src/wl/sys/wl_linux.o
-
-.tmp_versions/
-Module.symvers
+# Build artifacts and temp files
 modules.order
+Module.symvers
+.tmp_versions/
+.*.cmd
+.tmp_*
+built-in.a
+
+# Personal logs and patches
+fix_me.txt
+*.patch
+*.log
+
+# Editor and System files
+.DS_Store
+.swp
+*~

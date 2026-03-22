@@ -1,0 +1,18 @@
+# Broadcom-WL Kernel 6.18 Porting Guide
+
+## Core Mission
+Maintain and patch the Broadcom STA driver for modern XanMod kernels (6.18+).
+
+## Technical Stack
+- **Compiler:** Clang 19 / LLD
+- **Kernel Target:** 6.18.18-x64v2-xanmod1
+- **Base Source:** https://github.com/antoineco/broadcom-wl
+
+## Known Architectural Shifts (Kernel 6.18)
+1. **Timer API:** Replace \`init_timer\` and \`timer.data\` with \`timer_setup()\` and \`from_timer()\`.
+2. **Header Moves:** Use \`<linux/unaligned.h>\` instead of \`<asm/unaligned.h>\`.
+3. **ProcFS:** \`PDE_DATA\` is now lowercase \`pde_data\`.
+4. **Missing Symbols:** \`strlcpy\` is gone; use \`strscpy\` or the local static inline implementation.
+
+## Build Command
+\`make CC=clang -C /lib/modules/\$(uname -r)/build M=\$(pwd)\`
