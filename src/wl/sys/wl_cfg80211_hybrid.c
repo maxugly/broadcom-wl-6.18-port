@@ -95,7 +95,7 @@ static s32 wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev, u
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
 static s32
 wl_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
-                         int radio_id, enum nl80211_tx_power_setting type, s32 dbm);
+                         int radio_id, enum nl80211_tx_power_setting type, int mbm);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 static s32
 wl_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
@@ -1153,7 +1153,7 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev, u16 reason_c
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
 static s32
 wl_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
-                         int radio_id, enum nl80211_tx_power_setting type, s32 dbm)
+                         int radio_id, enum nl80211_tx_power_setting type, int mbm)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 static s32
 wl_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
@@ -1179,6 +1179,9 @@ wl_cfg80211_set_tx_power(struct wiphy *wiphy, enum tx_power_setting type, s32 db
 	u16 txpwrmw;
 	s32 err = 0;
 	s32 disable = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0)
+	s32 dbm = (s32)mbm;
+#endif
 
 	switch (type) {
 	case NL80211_TX_POWER_AUTOMATIC:
