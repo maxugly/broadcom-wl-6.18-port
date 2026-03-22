@@ -56,7 +56,11 @@
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/uaccess.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0)
+#include <linux/unaligned.h>
+#else
 #include <asm/unaligned.h>
+#endif
 
 #include <proto/802.1d.h>
 
@@ -105,15 +109,15 @@ static struct net_device *wl_alloc_linux_if(wl_if_t *wlif);
 
 static int wl_monitor_start(struct sk_buff *skb, struct net_device *dev);
 
-static void wl_start_txqwork(wl_task_t *task);
+static void wl_start_txqwork(struct work_struct *work);
 static void wl_txq_free(wl_info_t *wl);
 #define TXQ_LOCK(_wl) spin_lock_bh(&(_wl)->txq_lock)
 #define TXQ_UNLOCK(_wl) spin_unlock_bh(&(_wl)->txq_lock)
 
 static void wl_set_multicast_list_workitem(struct work_struct *work);
 
-static void wl_timer_task(wl_task_t *task);
-static void wl_dpc_rxwork(struct wl_task *task);
+static void wl_timer_task(struct work_struct *work);
+static void wl_dpc_rxwork(struct work_struct *work);
 
 static int wl_reg_proc_entry(wl_info_t *wl);
 
@@ -146,7 +150,7 @@ static void wl_dpc(ulong data);
 static void wl_tx_tasklet(ulong data);
 static void wl_link_up(wl_info_t *wl, char * ifname);
 static void wl_link_down(wl_info_t *wl, char *ifname);
-static int wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *), void *context);
+static int wl_schedule_task(wl_info_t *wl, void (*fn)(struct work_struct *work), void *context);
 #if defined(BCMDBG)
 static int wl_dump(wl_info_t *wl, struct bcmstrbuf *b);
 #endif
@@ -536,12 +540,12 @@ wl_attach(uint16 vendor, uint16 device, ulong regs,
 	wl->all_dispatch_mode = (passivemode == 0) ? TRUE : FALSE;
 	if (WL_ALL_PASSIVE_ENAB(wl)) {
 
-		MY_INIT_WORK(&wl->txq_task.work, (work_func_t)wl_start_txqwork);
+		MY_INIT_WORK(&wl->txq_task.work, wl_start_txqwork);
 		wl->txq_task.context = wl;
 
-		MY_INIT_WORK(&wl->multicast_task.work, (work_func_t)wl_set_multicast_list_workitem);
+		MY_INIT_WORK(&wl->multicast_task.work, wl_set_multicast_list_workitem);
 
-		MY_INIT_WORK(&wl->wl_dpc_task.work, (work_func_t)wl_dpc_rxwork);
+		MY_INIT_WORK(&wl->wl_dpc_task.work, wl_dpc_rxwork);
 		wl->wl_dpc_task.context = wl;
 	}
 
@@ -1200,7 +1204,7 @@ wl_txflowcontrol(wl_info_t *wl, struct wl_if *wlif, bool state, int prio)
 }
 
 static int
-wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *task), void *context)
+wl_schedule_task(wl_info_t *wl, void (*fn)(struct work_struct *work), void *context)
 {
 	wl_task_t *task;
 
@@ -1212,7 +1216,7 @@ wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *task), void *context)
 		return -ENOMEM;
 	}
 
-	MY_INIT_WORK(&task->work, (work_func_t)fn);
+	MY_INIT_WORK(&task->work, fn);
 	task->context = context;
 
 	if (!schedule_work(&task->work)) {
@@ -2045,8 +2049,9 @@ done:
 }
 
 static void BCMFASTPATH
-wl_dpc_rxwork(struct wl_task *task)
+wl_dpc_rxwork(struct work_struct *work)
 {
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	wl_info_t *wl = (wl_info_t *)task->context;
 	WL_TRACE(("wl%d: %s\n", wl->pub->unit, __FUNCTION__));
 

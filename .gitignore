@@ -24,3 +24,5 @@ fix_me.txt
 .DS_Store
 .swp
 *~
+*.o.d
+*.bak
