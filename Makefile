@@ -73,17 +73,16 @@ ifneq ($(KERNELRELEASE),)
 
   # Object files
   obj-m += wl.o
-  # Milestone 15: Use ldflags-y for the binary blob to satisfy modpost.
-  # We do NOT include lib/wlc_hybrid.o in wl-y to avoid intermediate duplication.
+  # Milestone 16: Precisely link the binary blob to the final module link target only.
+  # This prevents duplication into intermediate object files.
   wl-y := src/shared/linux_osl.o \
           src/wl/sys/wl_linux.o \
           src/wl/sys/wl_iw.o \
           src/wl/sys/wl_cfg80211_hybrid.o
 
-  # Link the binary blob at the final stage only.
-  # Kbuild's modpost requires that all members of wl-y have .cmd files.
-  # Binary blobs are best handled via ldflags-y to bypass the .cmd requirement.
-  ldflags-y += $(src)/lib/wlc_hybrid.o_shipped
+  # Target-specific LDFLAGS for the composite wl.o object.
+  # This variable is used by Kbuild during the link of all components into wl.o.
+  LDFLAGS_wl.o := -r -T $(src)/lib/wlc_hybrid.o_shipped
 
 else
 
