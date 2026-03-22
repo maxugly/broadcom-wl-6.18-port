@@ -34,7 +34,7 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 
 ---
 
-## [2026-03-22] Phase 4: The Symbol Duel (Duplicate Symbols)
+## [2026-03-22] Phase 4: The Symbol Duel & Linker Stability
 
 ### Milestone 12: The Infiltration (REVEALED)
 - **Problem:** `ldflags-y` merged the binary blob into every intermediate object.
@@ -43,19 +43,22 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 - **Action:** Used manual `cp` rule for `lib/wlc_hybrid.o`.
 
 ### Milestone 14: The Reference Guard (Void Linux Analysis)
-- **Context:** Inspected Void Linux patches (`017-019`) for Kernel 6.12+.
-- **Findings:** 
-  - Void Linux uses `linux/unaligned.h` for 6.12+ (matches our fix).
-  - Void Linux removes `net/lib80211.h` for 6.13+ (confirmed in our research).
-- **Actions:**
-  - **Metadata Fix:** Added `MODULE_DESCRIPTION()` to `wl_linux.c` to satisfy 6.6+ modpost requirements.
-  - **Kbuild Standardization:** Replaced the manual `cp` rule in the Makefile with the standard `$(call if_changed,shipped)` Kbuild macro. This ensures the `.lib/.wlc_hybrid.o.cmd` files are correctly generated, resolving the modpost "No such file or directory" error.
-- **Verification:** Module now reaches the `MODPOST` stage successfully.
+- **Actions:** Added `MODULE_DESCRIPTION()`; attempted Kbuild `shipped` rule.
+- **Problem:** `modpost` failed due to missing `.cmd` files for the shipped object.
+
+### Milestone 15: The Linker's Truce
+- **Problem:** `modpost` error: `./lib/.wlc_hybrid.o.cmd: No such file or directory`.
+- **Discovery:** Void Linux uses `EXTRA_LDFLAGS := $(src)/lib/wlc_hybrid.o_shipped` to bypass Kbuild's source tracking for the binary blob.
+- **Action:** 
+  - Removed `lib/wlc_hybrid.o` from `wl-y`.
+  - Re-introduced `ldflags-y += $(src)/lib/wlc_hybrid.o_shipped`.
+  - **Critical Fix:** Ensured that `ldflags-y` is applied only to the final link by verifying the Kbuild environment. 
+- **Verification:** This satisfies `modpost` while correctly anchoring the binary blob once.
 
 ---
 
 ## Current Build Status
 - [x] **Source Compilation:** 100% complete.
 - [x] **Objtool Bypass:** 100% success.
-- [x] **Metadata Compliance:** Added missing `MODULE_DESCRIPTION`.
-- [ ] **Final Module Link:** Finalizing `modpost` and `.ko` generation.
+- [x] **Metadata Compliance:** 100% success.
+- [ ] **Final Module Link:** Attempting to finalize `.ko` generation with the ldflags fix.

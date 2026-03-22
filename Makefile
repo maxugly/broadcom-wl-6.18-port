@@ -73,19 +73,17 @@ ifneq ($(KERNELRELEASE),)
 
   # Object files
   obj-m += wl.o
-  # Milestone 12 & 14: Correctly link the binary blob as a component object
+  # Milestone 15: Use ldflags-y for the binary blob to satisfy modpost.
+  # We do NOT include lib/wlc_hybrid.o in wl-y to avoid intermediate duplication.
   wl-y := src/shared/linux_osl.o \
           src/wl/sys/wl_linux.o \
           src/wl/sys/wl_iw.o \
-          src/wl/sys/wl_cfg80211_hybrid.o \
-          lib/wlc_hybrid.o
+          src/wl/sys/wl_cfg80211_hybrid.o
 
-  # Standard Kbuild rule for shipped objects
-  # This automatically handles the .o_shipped -> .o copy and generates .cmd files
-  $(obj)/lib/wlc_hybrid.o: $(src)/lib/wlc_hybrid.o_shipped
-	$(call if_changed,shipped)
-
-  targets += lib/wlc_hybrid.o
+  # Link the binary blob at the final stage only.
+  # Kbuild's modpost requires that all members of wl-y have .cmd files.
+  # Binary blobs are best handled via ldflags-y to bypass the .cmd requirement.
+  ldflags-y += $(src)/lib/wlc_hybrid.o_shipped
 
 else
 

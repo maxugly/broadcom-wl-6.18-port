@@ -106,7 +106,9 @@ dev_wlc_ioctl(
 	int len
 )
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+	return wlc_ioctl_internal(dev, cmd, arg, len);
+#else
 	struct ifreq ifr;
 	wl_ioctl_t ioc;
 	mm_segment_t fs;
@@ -121,7 +123,11 @@ dev_wlc_ioctl(
 	ifr.ifr_data = (caddr_t) &ioc;
 
 	fs = get_fs();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+	set_fs(KERNEL_DS);
+#else
 	set_fs(get_ds());
+#endif
 #if defined(WL_USE_NETDEV_OPS)
 	ret = dev->netdev_ops->ndo_do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
 #else
@@ -130,8 +136,6 @@ dev_wlc_ioctl(
 	set_fs(fs);
 
 	return ret;
-#else
-	return wlc_ioctl_internal(dev, cmd, arg, len);
 #endif
 }
 
