@@ -17,21 +17,29 @@
           llvmPackages_19.lld
           gnumake
           git
-          kmod # For modinfo/insmod
+          kmod 
         ];
 
-        # 2. Environment Variables
+        # 2. Environment Variables & Setup
         shellHook = ''
           export CC=clang
           export KERNEL_VERSION="6.18.18-x64v2-xanmod1"
-          echo "--- Broadcom Porting Shell Active ---"
+          export KERN_DIR="/lib/modules/$KERNEL_VERSION"
+          
+          # This is the "Shortcut" for Jules to build against the 6.18 headers
+          alias jbuild="make KBASE=$KERN_DIR"
+
+          echo "--- Broadcom Porting Lab Active ---"
           echo "Target Kernel: $KERNEL_VERSION"
           echo "Compiler: $(clang --version | head -n 1)"
+          echo "Shortcut: Type 'jbuild' to start the compilation."
           
           # Check if headers exist, if not, warn Jules
-          if [ ! -d "/lib/modules/$KERNEL_VERSION/build" ]; then
-            echo "WARNING: Kernel headers for $KERNEL_VERSION not found in /lib/modules/"
-            echo "Please run your setup-jules.sh script to install them."
+          if [ ! -d "$KERN_DIR/build" ]; then
+            echo ""
+            echo "!! WARNING: Kernel headers for $KERNEL_VERSION not found !!"
+            echo "Please run: sudo ./setup-jules.sh"
+            echo ""
           fi
         '';
       };
