@@ -1,3 +1,4 @@
+#include <linux/timer.h>
 /*
  * Linux-specific portion of
  * Broadcom 802.11abg Networking Device Driver
@@ -56,7 +57,7 @@
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/uaccess.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 
 #include <proto/802.1d.h>
 
@@ -1489,7 +1490,7 @@ wl_down(wl_info_t *wl)
 		int i = 0;
 		for (i = 0; (atomic_read(&wl->callbacks) > callbacks) && i < 10000; i++) {
 			schedule();
-			flush_scheduled_work();
+			flush_work(&wl->txq_task.work);
 		}
 	}
 	else
@@ -2369,7 +2370,7 @@ wl_timer(
 ) {
 	wl_timer_t *t =
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		from_timer(t, tl, timer);
+		timer_container_of(t, tl, timer);
 #else
 		(wl_timer_t *)data;
 #endif
@@ -2469,12 +2470,12 @@ wl_add_timer(wl_info_t *wl, wl_timer_t *t, uint ms, int periodic)
 }
 
 bool
-wl_del_timer(wl_info_t *wl, wl_timer_t *t)
+wl_timer_delete(wl_info_t *wl, wl_timer_t *t)
 {
 	ASSERT(t);
 	if (t->set) {
 		t->set = FALSE;
-		if (!del_timer(&t->timer)) {
+		if (!timer_delete(&t->timer)) {
 #ifdef BCMDBG
 			WL_INFORM(("wl%d: Failed to delete timer %s\n", wl->unit, t->name));
 #endif
@@ -2491,7 +2492,7 @@ wl_free_timer(wl_info_t *wl, wl_timer_t *t)
 {
 	wl_timer_t *tmp;
 
-	wl_del_timer(wl, t);
+	wl_timer_delete(wl, t);
 
 	if (wl->timers == t) {
 		wl->timers = wl->timers->next;
@@ -3334,7 +3335,7 @@ static ssize_t
 wl_proc_read(struct file *filp, char __user *buffer, size_t length, loff_t *offp)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
-	wl_info_t * wl = PDE_DATA(file_inode(filp));
+	wl_info_t * wl = pde_data(file_inode(filp));
 #else
 	wl_info_t * wl = pde_data(file_inode(filp));
 #endif
@@ -3395,7 +3396,7 @@ static ssize_t
 wl_proc_write(struct file *filp, const char __user *buff, size_t length, loff_t *offp)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
-	wl_info_t * wl = PDE_DATA(file_inode(filp));
+	wl_info_t * wl = pde_data(file_inode(filp));
 #else
 	wl_info_t * wl = pde_data(file_inode(filp));
 #endif
