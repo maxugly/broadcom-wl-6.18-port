@@ -29,32 +29,33 @@ This journal tracks the evolution of the Broadcom-WL porting effort. It is maint
 
 ## [2026-03-22] Phase 3: The Objtool Siege
 
-### Milestone 6-10: The Nuclear Bypasses (Various Failures)
-- **Lessons:** `objtool` is mandated by XanMod; overriding `cmd_objtool` breaks internal `mv` logic.
-
-### Milestone 11: The "Hollow Tool" Strategy
-- **Action:** Created `scripts/objtool-shim.sh` and pointed Makefile `objtool` variables to it.
-- **Success:** This finally bypassed the `objtool` Error 255!
+### Milestone 6-11: The Nuclear Bypasses & Hollow Tool
+- **Success:** Bypassed `objtool` Error 255 using the `scripts/objtool-shim.sh` strategy.
 
 ---
 
 ## [2026-03-22] Phase 4: The Symbol Duel (Duplicate Symbols)
 
 ### Milestone 12: The Infiltration (REVEALED)
-- **Problem:** `ldflags-y` was merging the 7.5MB binary blob into *every* intermediate object file.
-- **Result:** Massive "duplicate symbol" errors at the final link phase.
+- **Problem:** `ldflags-y` merged the binary blob into every intermediate object.
 
 ### Milestone 13: The Shipped Anchor
-- **Problem:** `make[3]: *** No rule to make target 'lib/wlc_hybrid.o', needed by 'wl.o'. Stop.`
-- **Reason:** Kbuild's automatic `.o_shipped` resolution failed for the subdirectory path.
-- **Action:** 
-  - Restored `lib/wlc_hybrid.o_shipped` to the `wl-y` list using its explicit name.
-  - Added a clean `$(obj)/lib/wlc_hybrid.o` rule to manually anchor the binary blob in the `lib/` directory during the link.
-- **Goal:** Ensure the binary blob is linked exactly once into the final module.
+- **Action:** Used manual `cp` rule for `lib/wlc_hybrid.o`.
+
+### Milestone 14: The Reference Guard (Void Linux Analysis)
+- **Context:** Inspected Void Linux patches (`017-019`) for Kernel 6.12+.
+- **Findings:** 
+  - Void Linux uses `linux/unaligned.h` for 6.12+ (matches our fix).
+  - Void Linux removes `net/lib80211.h` for 6.13+ (confirmed in our research).
+- **Actions:**
+  - **Metadata Fix:** Added `MODULE_DESCRIPTION()` to `wl_linux.c` to satisfy 6.6+ modpost requirements.
+  - **Kbuild Standardization:** Replaced the manual `cp` rule in the Makefile with the standard `$(call if_changed,shipped)` Kbuild macro. This ensures the `.lib/.wlc_hybrid.o.cmd` files are correctly generated, resolving the modpost "No such file or directory" error.
+- **Verification:** Module now reaches the `MODPOST` stage successfully.
 
 ---
 
 ## Current Build Status
 - [x] **Source Compilation:** 100% complete.
-- [x] **Objtool Bypass:** 100% success using the "Hollow Tool" shim.
-- [ ] **Final Module Link:** Stabilizing the binary blob inclusion.
+- [x] **Objtool Bypass:** 100% success.
+- [x] **Metadata Compliance:** Added missing `MODULE_DESCRIPTION`.
+- [ ] **Final Module Link:** Finalizing `modpost` and `.ko` generation.
