@@ -39,6 +39,15 @@
 
 #include <linux/module.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+#include <linux/timer.h>
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#define del_timer(timer) timer_delete(timer)
+#define del_timer_sync(timer) timer_delete_sync(timer)
+#endif
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0))
 
 #ifdef __UNDEF_NO_VERSION__

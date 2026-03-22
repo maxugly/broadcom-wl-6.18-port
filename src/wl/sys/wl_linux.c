@@ -20,16 +20,10 @@
  */
 
 #define LINUX_PORT
-
 #define __UNDEF_NO_VERSION__
 
-#include <typedefs.h>
-#include <linuxver.h>
-#include <osl.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
-#include <linux/module.h>
-#endif
-
+#include <linux/version.h>
+#include <linux/timer.h>
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/pci.h>
@@ -45,7 +39,8 @@
 #include <linux/completion.h>
 #include <linux/usb.h>
 #include <linux/pci_ids.h>
-#define WLC_MAXBSSCFG		1	
+#include <linux/module.h>
+#define WLC_MAXBSSCFG		1
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
 #include <asm/switch_to.h>
@@ -61,6 +56,10 @@
 #else
 #include <asm/unaligned.h>
 #endif
+
+#include <typedefs.h>
+#include <linuxver.h>
+#include <osl.h>
 
 #include <proto/802.1d.h>
 
@@ -2275,8 +2274,9 @@ wl_start(struct sk_buff *skb, struct net_device *dev)
 }
 
 static void BCMFASTPATH
-wl_start_txqwork(wl_task_t *task)
+wl_start_txqwork(struct work_struct *work)
 {
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	wl_info_t *wl = (wl_info_t *)task->context;
 	struct sk_buff *skb;
 
@@ -2315,7 +2315,8 @@ wl_tx_tasklet(ulong data)
 {
 	wl_task_t task;
 	task.context = (void *)data;
-	wl_start_txqwork(&task);
+	INIT_WORK(&task.work, wl_start_txqwork);
+	wl_start_txqwork(&task.work);
 }
 
 static void
@@ -2342,7 +2343,7 @@ wl_txq_free(wl_info_t *wl)
 static void
 wl_set_multicast_list_workitem(struct work_struct *work)
 {
-	wl_task_t *task = (wl_task_t *)work;
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	struct net_device *dev = (struct net_device*)task->context;
 	wl_info_t *wl;
 
@@ -2354,8 +2355,9 @@ wl_set_multicast_list_workitem(struct work_struct *work)
 }
 
 static void
-wl_timer_task(wl_task_t *task)
+wl_timer_task(struct work_struct *work)
 {
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	wl_timer_t *t = (wl_timer_t *)task->context;
 
 	_wl_timer(t);
@@ -2374,7 +2376,7 @@ wl_timer(
 ) {
 	wl_timer_t *t =
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
-		from_timer(t, tl, timer);
+		container_of(tl, wl_timer_t, timer);
 #else
 		(wl_timer_t *)data;
 #endif
@@ -3022,8 +3024,9 @@ wl_monitor_start(struct sk_buff *skb, struct net_device *dev)
 }
 
 static void
-_wl_add_monitor_if(wl_task_t *task)
+_wl_add_monitor_if(struct work_struct *work)
 {
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	struct net_device *dev;
 	wl_if_t *wlif = (wl_if_t *) task->context;
 	wl_info_t *wl = wlif->wl;
@@ -3081,8 +3084,9 @@ done:
 }
 
 static void
-_wl_del_monitor(wl_task_t *task)
+_wl_del_monitor(struct work_struct *work)
 {
+	wl_task_t *task = container_of(work, wl_task_t, work);
 	wl_info_t *wl = (wl_info_t *) task->context;
 
 	ASSERT(wl);
