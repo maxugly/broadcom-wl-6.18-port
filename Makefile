@@ -1,8 +1,7 @@
 # Broadcom 802.11abg Networking Device Driver Makefile
 # Targeting Kernel 6.18+ (XanMod)
 
-# Milestone 11: Use an absolute path to a local shim script for objtool
-# This satisfies Kbuild's mandatory tool requirement while skipping the actual scan.
+# Milestone 11: Use a local shim script to bypass objtool
 OBJTOOL_SHIM := $(abspath $(src)/scripts/objtool-shim.sh)
 override objtool := $(OBJTOOL_SHIM)
 override OBJTOOL := $(OBJTOOL_SHIM)
@@ -74,12 +73,13 @@ ifneq ($(KERNELRELEASE),)
 
   # Object files
   obj-m += wl.o
+  # Milestone 12: Add the shipped binary using standard Kbuild syntax
+  # This prevents the blob from being merged into every intermediate object.
   wl-y := src/shared/linux_osl.o \
           src/wl/sys/wl_linux.o \
           src/wl/sys/wl_iw.o \
-          src/wl/sys/wl_cfg80211_hybrid.o
-
-  ldflags-y += $(src)/lib/wlc_hybrid.o_shipped
+          src/wl/sys/wl_cfg80211_hybrid.o \
+          lib/wlc_hybrid.o
 
 else
 
